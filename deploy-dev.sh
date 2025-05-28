@@ -5,7 +5,6 @@ set -e
 
 echo "Starting deployment..."
 
-cd ~/${REPO_NAME} || { echo "Repo directory not found"; exit 1; }
 pwd
 git checkout dev
 

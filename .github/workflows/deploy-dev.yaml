@@ -87,4 +87,4 @@ jobs:
           
       - name: Execute script on EC2
         run: |
-          ssh ec2 "cd ${REPO_NAME} && bash deploy-dev.sh"
+          ssh ec2 "cd $REPO_NAME && bash deploy-dev.sh"
