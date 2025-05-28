@@ -6,7 +6,9 @@ set -e
 echo "Starting deployment..."
 
 cd ~/${REPO_NAME} || { echo "Repo directory not found"; exit 1; }
+
 git checkout dev
+
 if [ ! -d "venv" ] && [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
     python3.10 -m venv .venv
