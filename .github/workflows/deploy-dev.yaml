@@ -116,8 +116,8 @@ jobs:
                   metrics:
                     receivers: [hostmetrics]
                     exporters: [prometheus]
-              EOC
-            EOF
+          EOC
+          EOF
 
            
           
