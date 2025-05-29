@@ -97,27 +97,27 @@ jobs:
         run: |
           ssh ec2 << 'EOF'
             sudo tee /etc/otelcol/config.yaml > /dev/null << EOC
-            receivers:
-              hostmetrics:
-                collection_interval: 15s
-                scrapers:
-                  cpu:
-                  memory:
-                  disk:
-                  filesystem:
-                  load:
-                  network:
-                  processes:
-            exporters:
-              prometheus:
-                endpoint: "0.0.0.0:8889"
-            service:
-              pipelines:
-                metrics:
-                  receivers: [hostmetrics]
-                  exporters: [prometheus]
-            EOC
-          EOF
+              receivers:
+                hostmetrics:
+                  collection_interval: 15s
+                  scrapers:
+                    cpu:
+                    memory:
+                    disk:
+                    filesystem:
+                    load:
+                    network:
+                    processes:
+              exporters:
+                prometheus:
+                  endpoint: "0.0.0.0:8889"
+              service:
+                pipelines:
+                  metrics:
+                    receivers: [hostmetrics]
+                    exporters: [prometheus]
+              EOC
+            EOF
 
            
           
