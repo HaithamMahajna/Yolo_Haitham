@@ -96,7 +96,7 @@ jobs:
       - name: Create config.yaml on EC2
         run: |
           ssh ec2 << 'EOF'
-            sudo tee /etc/otelcol/config.yaml > /dev/null << 'EOC'
+            sudo tee /etc/otelcol/config.yaml > /dev/null << EOC
             receivers:
               hostmetrics:
                 collection_interval: 15s
