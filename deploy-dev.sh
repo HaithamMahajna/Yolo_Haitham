@@ -20,7 +20,7 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 pip install -r torch-requirements.txt
-
+pip install boto3
 
 # Stop existing server if running
 pkill -f "uvicorn" || true

@@ -6,6 +6,8 @@ import sqlite3
 import os
 import uuid
 import shutil
+import boto3
+from pydantic import BaseModel
 
 # Disable GPU usage
 import torch
@@ -16,9 +18,11 @@ app = FastAPI()
 UPLOAD_DIR = "uploads/original"
 PREDICTED_DIR = "uploads/predicted"
 DB_PATH = "predictions.db"
+S3_BUCKET = "haitham-polybot-dev"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(PREDICTED_DIR, exist_ok=True)
+s3 = boto3.client("s3")
 
 # Download the AI model (tiny model ~6MB)
 model = YOLO("yolov8n.pt")  
@@ -75,20 +79,41 @@ def save_detection_object(prediction_uid, label, score, box):
             VALUES (?, ?, ?, ?)
         """, (prediction_uid, label, score, str(box)))
 
+class ImageNameRequest(BaseModel):
+    image_name: str
+
 @app.post("/predict")
-def predict(file: UploadFile = File(...)):
+def predict(request: Request, image_name_req: ImageNameRequest = None, file: UploadFile = File(None)):
     """
     Predict objects in an image
     """
-    ext = os.path.splitext(file.filename)[1]
     uid = str(uuid.uuid4())
-    original_path = os.path.join(UPLOAD_DIR, uid + ext)
-    predicted_path = os.path.join(PREDICTED_DIR, uid + ext)
+    # Option 1: Image name in body (download from S3)
+    if image_name_req and image_name_req.image_name:
+        ext = os.path.splitext(image_name_req.image_name)[1]
+        original_path = os.path.join(UPLOAD_DIR, uid + ext)
+        try:
+            s3.download_file(S3_BUCKET, image_name_req.image_name, original_path)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"S3 download failed: {str(e)}")
+    
 
-    with open(original_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    # Option 2: Image uploaded as file
+
+    elif file is not None:
+        ext = os.path.splitext(file.filename)[1]
+        original_path = os.path.join(UPLOAD_DIR, uid + ext)
+        with open(original_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+    else:
+        raise HTTPException(status_code=400, detail="No image_name or file provided")
+    
+    
+
 
     results = model(original_path, device="cpu")
+    predicted_path = os.path.join(PREDICTED_DIR, uid + os.path.splitext(original_path)[1])
 
     annotated_frame = results[0].plot()  # NumPy image with boxes
     annotated_image = Image.fromarray(annotated_frame)
