@@ -5,7 +5,8 @@ set -e
 
 echo "Starting deployment..."
 
-cd ~/${REPO_NAME}
+pwd
+git checkout dev
 
 if [ ! -d "venv" ] && [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
@@ -26,8 +27,16 @@ sudo systemctl daemon-reload
 sudo systemctl restart yolo.service
 sudo systemctl enable yolo.service
 
+sudo systemctl restart otelcol
+
 if ! systemctl is-active --quiet yolo.service; then
   echo "❌ yolo.service is not running."
   sudo systemctl status yolo.service --no-pager
+  exit 1
+fi
+
+if ! systemctl is-active --quiet otelcol.service; then
+  echo "❌ yolo.service is not running."
+  sudo systemctl status otelcol.service --no-pager
   exit 1
 fi
