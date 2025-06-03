@@ -91,6 +91,7 @@ def predict(
     """
     Predict objects in an image
     """
+    print("Received:", image_name_req)
     uid = str(uuid.uuid4())
     # Option 1: Image name in body (download from S3)
     if image_name_req and image_name_req.image_name:
