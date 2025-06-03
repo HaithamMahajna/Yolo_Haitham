@@ -87,14 +87,14 @@ class ImageNameRequest(BaseModel):
 
 @app.post("/predict")
 def predict(
-    image_name_req: ImageNameRequest,
+    image_name_req: ImageNameRequest = Body(...),
     file: UploadFile = File(None)
 ):
     print(image_name_req)
     """
     Predict objects in an image
     """
-    print("Received:", image_name_req)
+    print("Received:", image_name_req.image_name)
     uid = str(uuid.uuid4())
     # Option 1: Image name in body (download from S3)
     if image_name_req and image_name_req.image_name:
