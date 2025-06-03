@@ -8,6 +8,7 @@ import uuid
 import shutil
 import boto3
 from pydantic import BaseModel
+from fastapi import Body
 
 # Disable GPU usage
 import torch
@@ -83,7 +84,10 @@ class ImageNameRequest(BaseModel):
     image_name: str
 
 @app.post("/predict")
-def predict(request: Request, image_name_req: ImageNameRequest = None, file: UploadFile = File(None)):
+def predict(
+    request: Request,
+    image_name_req: ImageNameRequest = Body(default=None),
+    file: UploadFile = File(default=None)):
     """
     Predict objects in an image
     """
