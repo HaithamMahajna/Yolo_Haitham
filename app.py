@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Form
 from fastapi.responses import FileResponse, Response
 from ultralytics import YOLO
 from PIL import Image
@@ -84,10 +84,8 @@ class ImageNameRequest(BaseModel):
     image_name: str
 
 @app.post("/predict")
-def predict(
-    request: Request,
-    image_name_req: ImageNameRequest = Body(default=None),
-    file: UploadFile = File(default=None)):
+def predict(request: Request,image_name_req: str = Form(None), file: UploadFile = File(None)):
+
     """
     Predict objects in an image
     """
