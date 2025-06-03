@@ -80,11 +80,10 @@ def save_detection_object(prediction_uid, label, score, box):
             VALUES (?, ?, ?, ?)
         """, (prediction_uid, label, score, str(box)))
 
-class ImageNameRequest(BaseModel):
-    image_name: str
+
 
 @app.post("/predict")
-def predict(request: Request,image_name_req: str = Form(None), file: UploadFile = File(None)):
+def predict(image_name_req: str = Form(None), file: UploadFile = File(None)):
 
     """
     Predict objects in an image
