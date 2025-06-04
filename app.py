@@ -123,6 +123,7 @@ def predict(
     annotated_frame = results[0].plot()  # NumPy image with boxes
     annotated_image = Image.fromarray(annotated_frame)
     annotated_image.save(predicted_path)
+    s3.upload_file(predicted_path, S3_BUCKET, predicted_path)
 
     save_prediction_session(uid, original_path, predicted_path)
     
@@ -134,6 +135,7 @@ def predict(
         bbox = box.xyxy[0].tolist()
         save_detection_object(uid, label, score, bbox)
         detected_labels.append(label)
+    
 
     return {
         "prediction_uid": uid, 
