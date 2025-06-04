@@ -87,10 +87,7 @@ class ImageNameRequest(BaseModel):
 
 @app.post("/predict")
 def predict(
-    image_name_req: ImageNameRequest = Body(...),
-    file: UploadFile = File(None)
-):
-    print(image_name_req)
+    image_name_req: ImageNameRequest = Body(...)):
     """
     Predict objects in an image
     """
