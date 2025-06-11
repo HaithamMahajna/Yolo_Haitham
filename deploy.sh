@@ -5,7 +5,8 @@ set -e
 
 echo "Starting deployment..."
 
-cd ~/${REPO_NAME}
+pwd
+git checkout dev
 
 if [ ! -d "venv" ] && [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
@@ -16,8 +17,10 @@ fi
 source .venv/bin/activate
 
 # Install dependencies
-#pip install --upgrade pip
-#pip install -r requirements.txt
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -r torch-requirements.txt
+pip install boto3
 
 # Stop existing server if running
 pkill -f "uvicorn" || true
@@ -26,8 +29,16 @@ sudo systemctl daemon-reload
 sudo systemctl restart yolo.service
 sudo systemctl enable yolo.service
 
+sudo systemctl restart otelcol
+
 if ! systemctl is-active --quiet yolo.service; then
   echo "❌ yolo.service is not running."
   sudo systemctl status yolo.service --no-pager
+  exit 1
+fi
+
+if ! systemctl is-active --quiet otelcol.service; then
+  echo "❌ yolo.service is not running."
+  sudo systemctl status otelcol.service --no-pager
   exit 1
 fi
