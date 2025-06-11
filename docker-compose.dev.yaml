@@ -3,10 +3,5 @@ services:
     image: ${IMG_NAME}
     ports:
       - "8080:8080"
-    env_file:
-      - .env  # Loads TELEGRAM_BOT_TOKEN from host .env into container
-    environment:
-      - TELEGRAM_BOT_TOKEN  # Pass it to the container environment
-      - BOT_APP_URL
-      - YOLO_SERVER_URL
+
 
