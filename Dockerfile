@@ -13,7 +13,7 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-RUN pip install tourch-requirements.txt
+RUN pip install torch-requirements.txt
 RUN pip install -r requirements.txt
 RUN pip install boto3
 RUN pip install pydantic   
