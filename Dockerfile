@@ -16,7 +16,8 @@ COPY . .
 RUN pip install -r torch-requirements.txt
 RUN pip install -r requirements.txt
 RUN pip install boto3
-RUN pip install pydantic   
+RUN pip install pydantic  
+RUN apt-get update && apt-get install -y libgl1
 # Expose port
 EXPOSE 8080
 
