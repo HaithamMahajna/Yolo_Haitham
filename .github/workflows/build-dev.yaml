@@ -1,0 +1,39 @@
+# .github/workflows/build-dev.yaml
+name: Yolo Build Dev
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
+    steps:
+     - uses: actions/checkout@v4
+     - id: build-image
+       name: Build Docker image
+       env:
+          DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+       run: |
+         docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
+         
+         img_name=yolo-dev:${{github.run_number}}
+         
+         # same docker_image to pass it to the next workflow 
+         echo "image=$img_name" >> $GITHUB_OUTPUT
+          
+         # build & push the image 
+         docker build --push -t ${{ secrets.DOCKERHUB_USERNAME }}/$img_name  .
+  Deploy:
+    needs: Build 
+    uses: ./.github/workflows/deploy-dev.yaml
+    with:
+      image: ${{ needs.Build.outputs.image }}
+    secrets:
+      EC2_HOST_DEV: ${{ secrets.EC2_HOST }}
+      EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+      EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
