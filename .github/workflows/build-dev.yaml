@@ -33,7 +33,7 @@ jobs:
     with:
       image: ${{ needs.Build.outputs.image }}
     secrets:
-      EC2_HOST_DEV: ${{ secrets.EC2_HOST }}
+      EC2_HOST_DEV: ${{ secrets.EC2_HOST_DEV }}
       EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
       EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
