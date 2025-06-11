@@ -1,126 +1,50 @@
-# The name of the workflow
-name: Yolo Deploy
+# .github/workflows/deploy-dev.yaml
+name: Polybot Deploy Prod
 
 on:
-  # The workflow will run when a push is made to branch `main`
-  push:
-    branches:
-     - dev
-     
-  # Allow to run it manually as well from GitHub web
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+    secrets:
+      EC2_HOST_DEV:
+        required: true
+      EC2_USERNAME:
+        required: true
+      EC2_SSH_KEY:
+      DOCKERHUB_USERNAME:
+        required: true
+   
+
+
+
+
   workflow_dispatch:
+    inputs:
+      image:
+        required: true
+        type: string
 
-# Environment variables 
-env:
-  # The URL of the GitHub repository, taken from GitHub context variables
-  REPO_URL: ${{ github.server_url }}/${{ github.repository }}.git
-  # The name of the repository without owner, taken from GitHub context variables
-  REPO_NAME: ${{ github.event.repository.name }}
-          
-# A workflow run is made up of one or more jobs. By default, different jobs are running concurrently
 jobs:
-  # This is a job named `Deploy`
-  Deploy:
-    # The type of machine to run the job on
-    runs-on: ubuntu-latest
-    
-    # A job contains a sequence of tasks called steps
-    steps:
-      # The first step, named **Checkout code**, 
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Configure SSH
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          EC2_HOST: ${{ secrets.EC2_HOST_DEV }}
-          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/private_key
-          chmod 600 ~/.ssh/private_key
-          cat > ~/.ssh/config << EOF
-          Host ec2
-              HostName $EC2_HOST
-              User $EC2_USERNAME
-              IdentityFile ~/.ssh/private_key
-              StrictHostKeyChecking no
-          EOF
-      
-      - name: Copy script to EC2
-
-        run: |
-          # Clone repository if it doesn't exist, otherwise pull latest changes
-          ssh ec2 "if [ -d ~/${REPO_NAME} ]; then cd ~/${REPO_NAME} && git pull; else git clone ${REPO_URL} ~/${REPO_NAME}; fi"
-
-      - name: Create yolo.service file
-        run: |
-          cat <<EOF > yolo.service
-          [Unit]
-          Description=YOLO Inference Server
-          [Service]
-          ExecStart=/home/ubuntu/Yolo_Haitham/.venv/bin/python3.10 /home/ubuntu/Yolo_Haitham/app.py
-          WorkingDirectory=/home/ubuntu/Yolo_Haitham
-          Environment="PATH=/home/ubuntu/Yolo_Haitham/.venv/bin"
-          User=ubuntu
-          Group=ubuntu
-          Restart=on-failure
-          [Install]
-          WantedBy=multi-user.target
-          EOF
-        
-
-      - name: Copy yolo.service to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST_DEV }}
-          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-        
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/private_key
-          chmod 600 ~/.ssh/private_key
-          scp -i ~/.ssh/private_key -o StrictHostKeyChecking=no yolo.service $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/
-          ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST << EOF
-          sudo mv /home/$EC2_USERNAME/yolo.service /etc/systemd/system/yolo.service
-          EOF
-      - name: Install OTC
-        run : |
-          ssh ec2 << 'EOF'
-            sudo apt-get update 
-            sudo apt-get -y install wget
-            wget https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.127.0/otelcol_0.127.0_linux_amd64.deb
-            sudo dpkg -i otelcol_0.127.0_linux_amd64.deb
-          EOF
-
-      - name: Create config.yaml on EC2
-        run: |
-          ssh ec2 << 'EOF'
-            sudo tee /etc/otelcol/config.yaml > /dev/null << EOC
-              receivers:
-                hostmetrics:
-                  collection_interval: 15s
-                  scrapers:
-                    cpu:
-                    memory:
-                    disk:
-                    filesystem:
-                    load:
-                    network:
-                    processes:
-              exporters:
-                prometheus:
-                  endpoint: "0.0.0.0:8889"
-              service:
-                pipelines:
-                  metrics:
-                    receivers: [hostmetrics]
-                    exporters: [prometheus]
-          EOC
-          EOF
-
-           
+    Deploy:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - name: Deploy Docker image
+          env:
+            IMG_NAME: ${{ inputs.image }}
+            EC2_HOST: ${{ secrets.EC2_HOST_DEV }}
+            EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+            SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+            DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           
-      - name: Execute script on EC2
-        run: |
-          ssh ec2 "cd $REPO_NAME && bash deploy-dev.sh"
+          
+          run: |
+          
+            echo "IMG_NAME=${DOCKERHUB_USERNAME}/${IMG_NAME}" > .env
+            mkdir -p ~/.ssh
+            echo "$SSH_PRIVATE_KEY" > ~/.ssh/private_key
+            chmod 600 ~/.ssh/private_key
+            scp -i ~/.ssh/private_key -o StrictHostKeyChecking=no .env docker-compose.dev.yaml $EC2_USERNAME@$EC2_HOST:/home/$EC2_USERNAME/
+            ssh -i ~/.ssh/private_key -o StrictHostKeyChecking=no $EC2_USERNAME@$EC2_HOST "docker compose -f docker-compose.dev.yaml pull && docker compose -f docker-compose.dev.yaml up -d"
