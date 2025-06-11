@@ -13,8 +13,7 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-RUN pip install torch-requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install -r torch-requirements.txt
 RUN pip install boto3
 RUN pip install pydantic   
 # Expose port
