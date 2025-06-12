@@ -14,6 +14,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY torch-requirements.txt .
+COPY requirements.txt .
 RUN pip install -r torch-requirements.txt
 RUN pip install -r requirements.txt
 RUN pip install boto3
