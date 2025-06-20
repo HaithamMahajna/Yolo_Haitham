@@ -118,32 +118,33 @@ def predict():
     uid = str(uuid.uuid4())
     sqs = boto3.client('sqs', region_name='us-east-1')
     QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/228281126655/haitham-polybot-chat-messages'
-    while 1==1:
-        response = sqs.receive_message(
-            QueueUrl=QUEUE_URL,
-            MaxNumberOfMessages=5,
-            WaitTimeSeconds=20)
+    try : 
+        while True:
+            response = sqs.receive_message(
+                QueueUrl=QUEUE_URL,
+                MaxNumberOfMessages=5,
+                WaitTimeSeconds=20)
     
-        messages = response.get('Messages', [])
+            messages = response.get('Messages', [])
     
-        for msg in messages:
-            msg_body: dict = json.loads(msg['Body'])
-            print(f"Handling message: {msg_body}")
+            for msg in messages:
+                msg_body: dict = json.loads(msg['Body'])
+                print(f"Handling message: {msg_body}")
         
-            # Delete the message when done processing it
-            sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg['ReceiptHandle'])
+                # Delete the message when done processing it
+                sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg['ReceiptHandle'])
 
-            print(f"Message processed: {msg['MessageId']}")
-            if msg and msg_body['image_name']:
-                ext = os.path.splitext(msg_body['image_name'])[1]
-                original_path = os.path.join(UPLOAD_DIR, uid + ext)
-                try:
-                    s3.download_file(S3_BUCKET, msg_body['image_name'], original_path)
-                except Exception as e:
-                    raise HTTPException(status_code=500, detail=f"S3 download failed: {str(e)}")
-        if not messages:
-            time.sleep(1)
-            
+                print(f"Message processed: {msg['MessageId']}")
+                if msg and msg_body['image_name']:
+                    ext = os.path.splitext(msg_body['image_name'])[1]
+                    original_path = os.path.join(UPLOAD_DIR, uid + ext)
+                    try:
+                        s3.download_file(S3_BUCKET, msg_body['image_name'], original_path)
+                    except Exception as e:
+                        raise HTTPException(status_code=500, detail=f"S3 download failed: {str(e)}")
+    except Exception as e:
+        print(f"Error: {e}")
+                    
     results = model(original_path, device="cpu")
     predicted_path = os.path.join(PREDICTED_DIR, uid + os.path.splitext(original_path)[1])
 
