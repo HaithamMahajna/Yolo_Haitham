@@ -110,12 +110,11 @@ class ImageNameRequest(BaseModel):
     image_name: str
 
 @app.post("/predict")
-def predict(
-    msg: ImageNameRequest = Body(...)):
+def predict():
     """
     Predict objects in an image
     """
-    print("Received:", msg.image_name)
+
     uid = str(uuid.uuid4())
     sqs = boto3.client('sqs', region_name='us-east-1')
     QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/228281126655/haitham-polybot-chat-messages'
