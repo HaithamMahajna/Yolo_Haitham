@@ -118,7 +118,7 @@ def predict():
     uid = str(uuid.uuid4())
     sqs = boto3.client('sqs', region_name='us-east-1')
     QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/228281126655/haitham-polybot-chat-messages'
-    while True:
+    while 1==1:
         response = sqs.receive_message(
             QueueUrl=QUEUE_URL,
             MaxNumberOfMessages=5,
@@ -132,6 +132,7 @@ def predict():
         
             # Delete the message when done processing it
             sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg['ReceiptHandle'])
+
             print(f"Message processed: {msg['MessageId']}")
             if msg and msg_body['image_name']:
                 ext = os.path.splitext(msg_body['image_name'])[1]
@@ -140,8 +141,9 @@ def predict():
                     s3.download_file(S3_BUCKET, msg_body['image_name'], original_path)
                 except Exception as e:
                     raise HTTPException(status_code=500, detail=f"S3 download failed: {str(e)}")
-            if not messages:
-               time.sleep(1)
+        if not messages:
+            time.sleep(1)
+            
     results = model(original_path, device="cpu")
     predicted_path = os.path.join(PREDICTED_DIR, uid + os.path.splitext(original_path)[1])
 
