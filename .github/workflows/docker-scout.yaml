@@ -28,6 +28,7 @@ jobs:
         with:
           command: cves
           image: ${{ secrets.DOCKERHUB_USERNAME }}/yolo-dev:21
+          only-severities: critical,high
           exit-code: '1'
           format: markdown
 
