@@ -27,7 +27,7 @@ jobs:
         uses: docker/scout-action@v1
         with:
           command: cves
-          image: ${{ secrets.DOCKERHUB_USERNAME }}/yolo-dev:latest
+          image: ${{ secrets.DOCKERHUB_USERNAME }}/yolo-dev:21
           exit-code: '1'
           format: markdown
 
