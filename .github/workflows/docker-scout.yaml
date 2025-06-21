@@ -25,10 +25,11 @@ jobs:
 
       - name: Run Docker Scout
         run: |
-          docker scout quickview ${{ secrets.DOCKERHUB_USERNAME }}/yolo-dev:${{ github.run_number }} \
-            --only-severities critical,high \
+          docker scout cves ${{ secrets.DOCKERHUB_USERNAME }}/yolo-dev:${{ github.run_number }} \
+            --severity critical,high \
             --exit-code 1 \
-            --output markdown > scout-report.md
+            --format markdown > scout-report.md
+
 
       - name: Upload scan result as comment
         if: always()
