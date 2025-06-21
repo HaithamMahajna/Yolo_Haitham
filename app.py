@@ -72,13 +72,14 @@ def save_prediction_session(uid, original_image, predicted_image,service="Dynamo
                          INSERT INTO prediction_sessions (uid, original_image, predicted_image)
                          VALUES (?, ?, ?)
                          """, (uid, original_image, predicted_image))
-    elif service=="DynamoDB":
+            
+    elif service == "DynamoDB":
         table = boto3.resource('dynamodb').Table('PredictionSessions')
         table.put_item(Item={
-            uid,
-            original_image,
-            predicted_image
-            })
+            "uid": uid,
+            "original_image": original_image,
+            "predicted_image": predicted_image
+        })
 
 
 
@@ -94,14 +95,16 @@ def save_detection_object(prediction_uid, label, score, box,service="DynamoDB"):
                          INSERT INTO detection_objects (prediction_uid, label, score, box)
                          VALUES (?, ?, ?, ?)
                          """, (prediction_uid, label, score, str(box)))
-    if service == "DynamoDB":
-        table = boto3.resource('dynamodb').Table('DetectioSessions')
+
+    elif service == "DynamoDB":
+        table = boto3.resource('dynamodb').Table('DetectionSessions')
         table.put_item(Item={
-            prediction_uid,
-            label,
-            score,
-            str(box)
+            "prediction_uid": prediction_uid,
+            "label": label,
+            "score": str(score),  # DynamoDB stores numbers as strings safely
+            "box": str(box)
             })
+
 
 
 
@@ -114,7 +117,6 @@ def predict():
     """
     Predict objects in an image
     """
-
     uid = str(uuid.uuid4())
     sqs = boto3.client('sqs', region_name='us-east-1')
     QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/228281126655/haitham-polybot-chat-messages'
@@ -175,33 +177,52 @@ def get_prediction_by_uid(uid: str):
     """
     Get prediction session by uid with all detected objects
     """
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        # Get prediction session
-        session = conn.execute("SELECT * FROM prediction_sessions WHERE uid = ?", (uid,)).fetchone()
-        if not session:
+    dynamodb = boto3.resource('dynamodb')
+    prediction_table = dynamodb.Table('PredictionSessions')
+    detection_table = dynamodb.Table('DetectionSessions')
+    try:
+        prediction = prediction_table.get_item(Key={'uid': uid}).get('Item')
+        if not prediction:
             raise HTTPException(status_code=404, detail="Prediction not found")
-            
-        # Get all detection objects for this prediction
-        objects = conn.execute(
-            "SELECT * FROM detection_objects WHERE prediction_uid = ?", 
-            (uid,)
-        ).fetchall()
-        
+
+        # Get detection objects
+        response = detection_table.query(
+            KeyConditionExpression=boto3.dynamodb.conditions.Key('prediction_uid').eq(uid)
+        )
+        detection_objects = response.get('Items', [])
+
         return {
-            "uid": session["uid"],
-            "timestamp": session["timestamp"],
-            "original_image": session["original_image"],
-            "predicted_image": session["predicted_image"],
+            "uid": uid,
+            "original_image": prediction.get("original_image"),
+            "predicted_image": prediction.get("predicted_image"),
             "detection_objects": [
                 {
-                    "id": obj["id"],
                     "label": obj["label"],
-                    "score": obj["score"],
+                    "score": float(obj["score"]),
                     "box": obj["box"]
-                } for obj in objects
+                } for obj in detection_objects
             ]
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DynamoDB error: {str(e)}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @app.get("/predictions/label/{label}")
 def get_predictions_by_label(label: str):
