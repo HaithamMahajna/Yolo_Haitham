@@ -30,10 +30,10 @@ jobs:
           
       - name: Run Docker Scout scan
         run: |
-          docker scout cves ${{ secrets.DOCKERHUB_USERNAME }}/yolo-dev:${{ github.run_number }} \
-            --only-severities=critical,high \
+          docker scout cves ${{ secrets.DOCKERHUB_USERNAME }}/yolo-dev:latest \
             --exit-code 1 \
             --format markdown > scout-report.md
+
 
 
       - name: Upload scan result as comment
