@@ -144,33 +144,34 @@ def predict():
                         s3.download_file(S3_BUCKET, msg_body['image_name'], original_path)
                     except Exception as e:
                         raise HTTPException(status_code=500, detail=f"S3 download failed: {str(e)}")
+                    results = model(original_path, device="cpu")
+                    predicted_path = os.path.join(PREDICTED_DIR, uid + os.path.splitext(original_path)[1])
+                    annotated_frame = results[0].plot()  # NumPy image with boxes
+                    annotated_image = Image.fromarray(annotated_frame)
+                    annotated_image.save(predicted_path)
+                    s3.upload_file(predicted_path, S3_BUCKET, predicted_path)
+                    save_prediction_session(uid, original_path, predicted_path)
+                    detected_labels = []
+                    for box in results[0].boxes:
+                        label_idx = int(box.cls[0].item())
+                        label = model.names[label_idx]
+                        score = float(box.conf[0])
+                        bbox = box.xyxy[0].tolist()
+                        save_detection_object(uid, label, score, bbox)
+                        detected_labels.append(label)
+    
+                    return {
+                        "prediction_uid": uid, 
+                        "detection_count": len(results[0].boxes),
+                        "labels": detected_labels
+                    }
     except Exception as e:
         print(f"Error: {e}")
                     
-    results = model(original_path, device="cpu")
-    predicted_path = os.path.join(PREDICTED_DIR, uid + os.path.splitext(original_path)[1])
-
-    annotated_frame = results[0].plot()  # NumPy image with boxes
-    annotated_image = Image.fromarray(annotated_frame)
-    annotated_image.save(predicted_path)
-    s3.upload_file(predicted_path, S3_BUCKET, predicted_path)
-
-    save_prediction_session(uid, original_path, predicted_path)
     
-    detected_labels = []
-    for box in results[0].boxes:
-        label_idx = int(box.cls[0].item())
-        label = model.names[label_idx]
-        score = float(box.conf[0])
-        bbox = box.xyxy[0].tolist()
-        save_detection_object(uid, label, score, bbox)
-        detected_labels.append(label)
     
-    return {
-        "prediction_uid": uid, 
-        "detection_count": len(results[0].boxes),
-        "labels": detected_labels
-    }
+
+
 
 @app.get("/prediction/{uid}")
 def get_prediction_by_uid(uid: str):
