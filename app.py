@@ -74,7 +74,7 @@ def save_prediction_session(uid, original_image, predicted_image,service="Dynamo
                          """, (uid, original_image, predicted_image))
             
     elif service == "DynamoDB":
-        table = boto3.resource('dynamodb').Table('PredictionSessions')
+        table = boto3.resource('dynamodb', region_name='us-east-1').Table('PredictionSessions')
         table.put_item(Item={
             "uid": uid,
             "original_image": original_image,
@@ -97,7 +97,7 @@ def save_detection_object(prediction_uid, label, score, box,service="DynamoDB"):
                          """, (prediction_uid, label, score, str(box)))
 
     elif service == "DynamoDB":
-        table = boto3.resource('dynamodb').Table('DetectionSessions')
+        table = boto3.resource('dynamodb', region_name='us-east-1').Table('DetectionSessions')
         table.put_item(Item={
             "prediction_uid": prediction_uid,
             "label": label,
@@ -178,7 +178,7 @@ def get_prediction_by_uid(uid: str):
     """
     Get prediction session by uid with all detected objects
     """
-    dynamodb = boto3.resource('dynamodb')
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
     prediction_table = dynamodb.Table('PredictionSessions')
     detection_table = dynamodb.Table('DetectionSessions')
     try:
