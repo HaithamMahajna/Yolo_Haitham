@@ -170,7 +170,7 @@ def main ():
                         save_detection_object(uid, label, score, bbox)
                         detected_labels.append(label)
                         
-                    url = f"http://10.0.0.87/predictions/{uid}"
+                    url = f"http://10.0.0.87:8443/predictions/{uid}"
                     payload = {
                         "chat_id": msg_body['chat_id']
                         }
