@@ -62,7 +62,10 @@ def init_db():
 
 init_db()
 
-def save_prediction_session(uid, original_image, predicted_image,service="DynamoDB"):
+
+
+
+def save_prediction_session(uid, original_image, predicted_image,chat_id,service="DynamoDB"):
     """
     Save prediction session to database
     """
@@ -78,7 +81,8 @@ def save_prediction_session(uid, original_image, predicted_image,service="Dynamo
         table.put_item(Item={
             "uid": uid,
             "original_image": original_image,
-            "predicted_image": predicted_image
+            "predicted_image": predicted_image,
+            "chat_id" : chat_id
         })
 
 
@@ -150,7 +154,7 @@ def predict():
                     annotated_image = Image.fromarray(annotated_frame)
                     annotated_image.save(predicted_path)
                     s3.upload_file(predicted_path, S3_BUCKET, predicted_path)
-                    save_prediction_session(uid, original_path, predicted_path)
+                    save_prediction_session(uid, original_path, predicted_path,msg_body['chat_id'])
                     detected_labels = []
                     for box in results[0].boxes:
                         label_idx = int(box.cls[0].item())
@@ -159,12 +163,74 @@ def predict():
                         bbox = box.xyxy[0].tolist()
                         save_detection_object(uid, label, score, bbox)
                         detected_labels.append(label)
+            time.sleep(1)
+    except Exception as e:
+        print(f"Error: {e}")
+                    
+def main ():
+    """
+    Predict objects in an image
+    """
+    import requests
+
+    uid = str(uuid.uuid4())
+    sqs = boto3.client('sqs', region_name='us-east-1')
+    QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/228281126655/haitham-polybot-chat-messages'
+    try : 
+        while True:
+            response = sqs.receive_message(
+                QueueUrl=QUEUE_URL,
+                MaxNumberOfMessages=5,
+                WaitTimeSeconds=20)
     
-                    return {
-                        "prediction_uid": uid, 
-                        "detection_count": len(results[0].boxes),
-                        "labels": detected_labels
-                    }
+            messages = response.get('Messages', [])
+    
+            for msg in messages:
+                msg_body: dict = json.loads(msg['Body'])
+                print(f"Handling message: {msg_body}")
+        
+                # Delete the message when done processing it
+                sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg['ReceiptHandle'])
+
+                print(f"Message processed: {msg['MessageId']}")
+                if msg and msg_body['image_name']:
+                    ext = os.path.splitext(msg_body['image_name'])[1]
+                    original_path = os.path.join(UPLOAD_DIR, uid + ext)
+                    try:
+                        s3.download_file(S3_BUCKET, msg_body['image_name'], original_path)
+                    except Exception as e:
+                        raise HTTPException(status_code=500, detail=f"S3 download failed: {str(e)}")
+                    results = model(original_path, device="cpu")
+                    predicted_path = os.path.join(PREDICTED_DIR, uid + os.path.splitext(original_path)[1])
+                    annotated_frame = results[0].plot()  # NumPy image with boxes
+                    annotated_image = Image.fromarray(annotated_frame)
+                    annotated_image.save(predicted_path)
+                    s3.upload_file(predicted_path, S3_BUCKET, predicted_path)
+                    save_prediction_session(uid, original_path, predicted_path,msg_body['chat_id'])
+                    detected_labels = []
+                    for box in results[0].boxes:
+                        label_idx = int(box.cls[0].item())
+                        label = model.names[label_idx]
+                        score = float(box.conf[0])
+                        bbox = box.xyxy[0].tolist()
+                        save_detection_object(uid, label, score, bbox)
+                        detected_labels.append(label)
+                        
+                    url = f"http://10.0.0.87/predictions/{uid}"
+    
+                    payload = {
+                        "chat_id": msg_body['chat_id']
+                        }
+
+                    try:
+                        response = requests.post(url, json=payload, timeout=5)
+                        response.raise_for_status()
+                        print(f"Notified Polybot for prediction_id: {uid}")
+                    except requests.exceptions.RequestException as e:
+                        print(f"Failed to notify Polybot: {e}")
+
+
+            time.sleep(1)
     except Exception as e:
         print(f"Error: {e}")
                     
@@ -302,3 +368,4 @@ def health():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)
+    main()
