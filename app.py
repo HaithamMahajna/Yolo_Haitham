@@ -217,13 +217,12 @@ def main ():
                         detected_labels.append(label)
                         
                     url = f"http://10.0.0.87/predictions/{uid}"
-    
                     payload = {
                         "chat_id": msg_body['chat_id']
                         }
 
                     try:
-                        response = requests.post(url, json=payload, timeout=5)
+                        response = requests.post(url, json=payload)
                         response.raise_for_status()
                         print(f"Notified Polybot for prediction_id: {uid}")
                     except requests.exceptions.RequestException as e:
