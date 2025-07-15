@@ -127,7 +127,7 @@ def main ():
     """
     import requests
 
-    uid1 = str(uuid.uuid4())
+    uid = str(uuid.uuid4())
     sqs = boto3.client('sqs', region_name='us-east-1')
     QUEUE_URL = 'https://sqs.us-east-1.amazonaws.com/228281126655/haitham-polybot-chat-messages'
     try : 
@@ -163,7 +163,6 @@ def main ():
                     save_prediction_session(uid, original_path, predicted_path,msg_body['chat_id'])
                     detected_labels = []
                     for box in results[0].boxes:
-                        uid = str(uuid.uuid4())
                         label_idx = int(box.cls[0].item())
                         label = model.names[label_idx]
                         score = float(box.conf[0])
@@ -171,7 +170,7 @@ def main ():
                         save_detection_object(uid, label, score, bbox)
                         detected_labels.append(label)
                     url = os.getenv("POLYBOT_URL", "polybot-dev")
-                    url = f"http://{url}:8443/predictions/{uid1}"
+                    url = f"http://{url}:8443/predictions/{uid}"
                     payload = {
                         "chat_id": msg_body['chat_id']
                         }
@@ -179,7 +178,7 @@ def main ():
                     try:
                         response = requests.post(url, json=payload)
                         response.raise_for_status()
-                        print(f"Notified Polybot for prediction_id: {uid1}")
+                        print(f"Notified Polybot for prediction_id: {uid}")
                     except requests.exceptions.RequestException as e:
                         print(f"Failed to notify Polybot: {e}")
 
